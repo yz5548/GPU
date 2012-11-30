@@ -39,6 +39,13 @@ int main(int argc, char** argv) {
     read_graph_dimension(NUM_NODES, NUM_EDGES);
     Graph A(NUM_NODES, NUM_EDGES);
     read_graph(A);
+    // allocate memory for the graph on device.
+    cudaMalloc((void**)&devA,size);
+
+
+    // copy graph from host to device.
+
+
 
     if (argc < 3) {
         std::cerr << "Wrong Number of Inputs" << std::endl;
