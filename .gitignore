@@ -1,0 +1,6 @@
+#C++ object files
+*.o
+*.app
+#Project files
+.cproject
+.project
