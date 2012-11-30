@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <thrust/device_vector.h>
 
 #include "Graph.h"
 #include "Distance.h"
@@ -22,7 +23,7 @@ using namespace std;
  */
 void read_graph(Graph& A);
 void read_graph_dimension(int& NUM_NODES, int& NUM_EDGES);
-
+void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr);
 // ----
 // main
 // ----
@@ -47,12 +48,13 @@ int main(int argc, char** argv) {
     dist_init(dist, SOURCE, NUM_NODES);
 
     // allocate memory for the graph on device.
-    int* devA;
-    int size = 100;
-//    cudaMalloc((void**)&devA,size);
-
-
+    
+    thrust::device_vector<int> val;
+    thrust::device_vector<int> col_ind;
+    thrust::device_vector<int> row_ptr;
+    
     // copy graph from host to device.
+    init_gpu(val, col_ind, row_ptr);
 
     Ford_GPU(A, dist, NUM_BLOCKS, NUM_THREADS);
 
@@ -114,3 +116,6 @@ void read_graph(Graph& A) {
     }
 }
 
+void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr){
+    
+}

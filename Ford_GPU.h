@@ -2,6 +2,7 @@
 #define _FORD_GPU_H
 
 #include <math.h>
+
 using namespace std;
 /**
  * Relax all edges surrounding node u
