@@ -7,8 +7,7 @@ using namespace std;
  * Relax all edges surrounding node u
  * @param u: source node to relax around
  */
-//__global__
-void sssp(Graph& A, int dist[], const int& RANGE, bool& changed) {
+__global__ void sssp(Graph& A, int dist[], const int& RANGE, bool& changed) {
     int threadID = threadIdx.x;
     const int LEFT = threadID * RANGE;
     const int RIGHT = (threadID + 1) * RANGE;
