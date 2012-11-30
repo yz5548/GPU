@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     // allocate memory for the graph on device.
     int* devA;
     int size = 100;
-    cudaMalloc((void**)&devA,size);
+//    cudaMalloc((void**)&devA,size);
 
 
     // copy graph from host to device.

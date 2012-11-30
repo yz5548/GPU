@@ -4,3 +4,9 @@
 #Project files
 .cproject
 .project
+
+#GPU.cu is the one we care
+GPU.c++
+
+#runTest is taken care of on lonestar
+runTest.sh
