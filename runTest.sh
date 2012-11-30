@@ -1,15 +1,16 @@
-rm -f SSSP.app
-g++ -ansi -O3  -pedantic -lpthread -Wall SSSP.c++ -o SSSP.app
+SOURCE=GPU.c++
+APP=GPU.app
 
-FOLDER=./tests/SIZE_18
+rm -f $APP
+g++ -ansi -O3  -pedantic -Wall $SOURCE -o $APP
+
+FOLDER=./tests/SIZE_4
 NUM_TEST=10
-test=10
-echo "TEST SUITE: $FOLDER $1"
+OUTPUT=graph.out
 
-res1=$(date +%s.%N)
+for test in {1..1}
+do
+	./$APP 1 1 < $FOLDER/$test.in
+done 
 
-./SSSP.app DT 12 $1 < $FOLDER/$test.in
-
-res2=$(date +%s.%N)
-echo "delta: 1/$dt RUN $test --- $(echo "$res2 - $res1"|bc ) sec"
 rm -f $OUTPUT
