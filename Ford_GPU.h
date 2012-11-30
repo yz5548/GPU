@@ -42,8 +42,7 @@ void Ford_GPU(Graph& A, int dist[], const int NUM_BLOCKS,
     bool changed;
     do {
         changed = false;
-//        sssp<<<NUM_BLOCKS,NUM_THREADS>>>(A, dist, RANGE, changed);
-        sssp(A, dist, RANGE, changed);
+        sssp<<<NUM_BLOCKS,NUM_THREADS>>>(A, dist, RANGE, changed);
     } while (changed);
 }
 #endif // !_FORD_GPU_H

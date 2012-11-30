@@ -1,8 +1,8 @@
-SOURCE=GPU.c++
+SOURCE=GPU.cu
 APP=GPU.app
 
 rm -f $APP
-g++ -ansi -O3  -pedantic -Wall $SOURCE -o $APP
+nvcc -c $SOURCE -o $APP
 
 FOLDER=./tests/SIZE_4
 NUM_TEST=10
