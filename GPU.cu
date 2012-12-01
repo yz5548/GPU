@@ -47,12 +47,7 @@ int main(int argc, char** argv) {
     //Initialization
     int* dist = new int[NUM_NODES];
     dist_init(dist, SOURCE, NUM_NODES);
-
-    // allocate memory for the graph on device.
     
-    // copy graph from host to device.
-//    init_gpu(val, col_ind, row_ptr);
-
     Ford_GPU(A, dist, NUM_BLOCKS, NUM_THREADS);
 
     dist_print(dist, NUM_NODES);
@@ -125,7 +120,4 @@ void read_graph(CRS& A) {
     }    
     
 }
-//
-//void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr){
-//    
-//}
+

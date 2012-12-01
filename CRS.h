@@ -10,7 +10,7 @@
 const int DEFAULT_SIZE = 100;
 
 class CRS {
-  private:
+  public:
     int* _val;
     int* _col_ind;
     int* _row_ptr;
@@ -26,6 +26,7 @@ class CRS {
     int num_edges() const;
     int vertex(int x, int index);
     int &operator()(int x, int y);
+
     void print();
 };
 
