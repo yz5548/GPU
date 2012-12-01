@@ -40,28 +40,24 @@ __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
  */
 void init_GPU(CRS& A, int dist[], 
               int *devVal, int *devColInd, 
-              int *devRowPtr, int *devDist, int* devRange, bool* devChanged){
+              int *devRowPtr, int *devDist){
     // allocate memory for the graph on device.
     const int M = A.num_edges();
     const int N = A.num_nodes();
-    const int sizeDev  = M * sizeof(int));
-    const int sizeDist = N * sizeof(int));
+    const int sizeA  = M * sizeof(int);
+    const int sizeRowPtr = (M + 1) * sizeof(int)
+    const int sizeDist = N * sizeof(int);
 
-    cudaMalloc( (void**)&devVal, sizeDev );
-    cudaMalloc( (void**)&devColInd, sizeDev );
-    cudaMalloc( (void**)&devRowPtr, sizeDev + sizeof(int));
+    cudaMalloc( (void**)&devVal   , sizeA );
+    cudaMalloc( (void**)&devColInd, sizeA );
+    cudaMalloc( (void**)&devRowPtr, sizeA + sizeof(int));
     cudaMalloc( (void**)&devDist, sizeDist );
-    //    cudaMalloc( (void**)&devRange, 1 );
-    //    cudaMalloc( (void**)&devChanged, 1 );
-
 
     // copy graph from host to device.
-    cudaMemcpy( devVal,     A._val      , size    , cudaMemcpyHostToDevice);
-    cudaMemcpy( devColInd,  A._col_ind  , sizeEdge    , cudaMemcpyHostToDevice);
-    cudaMemcpy( devRowPtr,  A._row_ptr  , sizeEdge + sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy( devDist,    dist        , sizeNode       , cudaMemcpyHostToDevice);
-    //    cudaMemcpy( devRange,   RANGE       , 1       , cudaMemcpyHostToDevice);
-    //    cudaMemcpy( devChanged, changed     , 1       , cudaMemcpyHostToDevice);
+    cudaMemcpy( devVal,     A._val      , sizeA     , cudaMemcpyHostToDevice);
+    cudaMemcpy( devColInd,  A._col_ind  , sizeA     , cudaMemcpyHostToDevice);
+    cudaMemcpy( devRowPtr,  A._row_ptr  , sizePtr   , cudaMemcpyHostToDevice);
+    cudaMemcpy( devDist,    dist        , sizeDist  , cudaMemcpyHostToDevice);
 }
 
 void free_GPU(int *devVal, int *devColInd, int *devRowPtr, int *devDist){
@@ -76,20 +72,21 @@ void free_GPU(int *devVal, int *devColInd, int *devRowPtr, int *devDist){
  */
 void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
               const int NUM_THREADS) {
+    int RANGE = ceil((float) N / NUM_THREADS);
 
     //Device memory container
     int *devVal = 0, *devColInd = 0, *devRowPtr = 0 , *devDist = 0;
-    int *devRange = 0;
-    bool *devChanged = 0;
 
-    init_GPU(A, dist, devVal, devColInd, devRowPtr, devDist, devRange, devChanged );
+    init_GPU(A, dist, devVal, devColInd, devRowPtr, devDist);
 
     const int N = A.num_nodes();
     const int M = A.num_edges();
-    int RANGE = ceil((float) N / NUM_THREADS);
+    const int sizeA  = M * sizeof(int);
+    const int sizeRowPtr = (M + 1) * sizeof(int)
+    const int sizeDist = N * sizeof(int);
 
     int *arr = new int[M];
-    cudaMemcpy( devColInd, arr  , M * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( devVal, arr  , sizeA, cudaMemcpyDeviceToHost);
     dist_print(arr, M);
     delete arr;
 
@@ -104,7 +101,7 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
     } while (changed);
   
     //Copy back data to dist
-    cudaMemcpy( dist, devDist , N, cudaMemcpyDeviceToHost);
+    cudaMemcpy( dist, devDist , sizeDist, cudaMemcpyDeviceToHost);
 
     //Free Cuda Memory
     free_GPU(devVal, devColInd, devRowPtr, devDist);
