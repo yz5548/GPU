@@ -21,7 +21,7 @@ class CRS {
     int num_nodes() const;
     CRS(int NUM_NODES, int NUM_EDGES);
     ~CRS();
-    void insert(int x, int y, double weight);
+    void insert(int x, int y, int weight);
     int num_edges(int x);
     int num_edges() const;
     int vertex(int x, int index);
@@ -67,7 +67,7 @@ int CRS::num_edges() const{
 /**
  * Insert an edge to the CPR CRS
  */
-void CRS::insert(int x, int y, double weight) {
+void CRS::insert(int x, int y, int weight) {
     //First time insertion on a node
     if (_row_ptr[x + 1] == 0) {
         _row_ptr[x + 1] = _row_ptr[x];
