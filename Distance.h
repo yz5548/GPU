@@ -9,7 +9,7 @@
 #define DISTANCE_H_
 
 #define MAX_VALUE 1000000000
-
+#include "CRS.h"
 void dist_init(int dist[], int SOURCE, const int N) {
     for (int i = 0; i < N; ++i) {
         dist[i] = MAX_VALUE ;
@@ -17,15 +17,12 @@ void dist_init(int dist[], int SOURCE, const int N) {
     dist[SOURCE] = 0;
 }
 
-void dist_verify(int dist[], Graph& A, const int N) {
+void dist_verify(int dist[], CRS& A, const int N) {
     for (int x = 0; x < N; ++x) {
-        std::list<Edge> edges = A[x];
-        std::list<Edge>::iterator iterator;
-        for ( iterator = edges.begin(); iterator != edges.end(); ++iterator) {
-            Edge node = *iterator;
-            int y = node._vertex;
-            int weight = node._weight;
-            assert(dist[x] + weight >= dist[y]);
+        const int NUM_EDGES = A.num_edges(x);
+        for (int edge_index = 0; edge_index < NUM_EDGES; ++edge_index) {
+            int y = A.vertex(x, edge_index);
+            assert(dist[x] + A(x, edge_index) >= dist[y]);
         }
     }
 }

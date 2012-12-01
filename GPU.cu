@@ -10,20 +10,21 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include <thrust/device_vector.h>
+//#include <thrust/device_vector.h>
 
 #include "Graph.h"
 #include "Distance.h"
 #include "Ford_GPU.h"
+#include "CRS.h"
 
 using namespace std;
 
 /**
  * Function Prototype
  */
-void read_graph(Graph& A);
+void read_graph(CRS& A);
 void read_graph_dimension(int& NUM_NODES, int& NUM_EDGES);
-void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr);
+//void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr);
 // ----
 // main
 // ----
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
      * Reading Graph Data
      */
     read_graph_dimension(NUM_NODES, NUM_EDGES);
-    Graph A(NUM_NODES, NUM_EDGES);
+    CRS A(NUM_NODES, NUM_EDGES);
     read_graph(A);
 
 
@@ -49,12 +50,8 @@ int main(int argc, char** argv) {
 
     // allocate memory for the graph on device.
     
-    thrust::device_vector<int> val;
-    thrust::device_vector<int> col_ind;
-    thrust::device_vector<int> row_ptr;
-    
     // copy graph from host to device.
-    init_gpu(val, col_ind, row_ptr);
+//    init_gpu(val, col_ind, row_ptr);
 
     Ford_GPU(A, dist, NUM_BLOCKS, NUM_THREADS);
 
@@ -99,23 +96,36 @@ void read_graph_dimension(int& NUM_NODES, int& NUM_EDGES) {
  * Read the input files.
  * Put data in graph's storage
  */
-void read_graph(Graph& A) {
+void read_graph(CRS& A) {
     char line_type;
     char line[256];
-    int x, y;
+    int x, y, v;
     int weight;
 
+    const int N = A.num_nodes();
+    Graph B( N , A.num_edges());
     while (cin >> line_type) {
         if (line_type == 'c') {
             cin.getline(line, 256, '\n');
         } else if (line_type == 'a') {
             cin >> x >> y >> weight;
-            A.insert(x, y, weight);
+            B.insert(x, y, weight);
         } else
             break;
     }
-}
-
-void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr){
+    
+    for (int u = 1; u < N; ++u) {
+        list<Edge>& edges = B[u];
+        list<Edge>::iterator iterator;
+        for (iterator = edges.begin(); iterator != edges.end(); ++iterator) {
+            Edge edge = *iterator;
+            v = edge._vertex;
+            A.insert( u, v, edge._weight);
+        }
+    }    
     
 }
+//
+//void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr){
+//    
+//}
