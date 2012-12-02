@@ -61,7 +61,7 @@ int CRS::num_nodes() const{
     return _NUM_NODES;
 }
 int CRS::num_edges() const{
-    return _NUM_NODES;
+    return _NUM_EDGES;
 }
 
 /**
