@@ -17,10 +17,15 @@ __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
 
     const int RANGE = devArgs[0];
     int& changed    = devArgs[1];
+    const int N     = devArgs[2];
 
     const int LEFT  = RANGE * threadID;
-    const int RIGHT = RANGE *(threadID + 1);
-    int cost, v, num_edge, begin, end, weight;
+    int RIGHT = RANGE *(threadID + 1);
+    if (RIGHT > N){
+       RIGHT = N;
+    }
+
+    int cost, v, num_edge, begin, end, weight, old;
     for (int u = LEFT; u < RIGHT; ++u) {
         begin = devRowPtr[u];
         end   = devRowPtr[u + 1];
@@ -31,16 +36,10 @@ __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
              weight = devVal[begin + e];
              //Crictical computation and decision
              cost = devDist[u] + weight;
-
-             if (cost < devDist[v]) {
-                 changed = true;
-                 devDist[v] = cost;
-             }
-
+	     old = atomicMin( &devDist[v], cost);
+             changed = changed | (old != devDist[v]);
          }
-	
      }
-
 }
 
 /**
@@ -55,7 +54,7 @@ void init_GPU(CRS& A, int dist[], int args[],
     const int& sizeColInd = sizeVal;
     const int sizeRowPtr  = (N + 1) * sizeof(int);
     const int sizeDist    = N * sizeof(int);
-    const int sizeArgs    = 2 * sizeof(int);
+    const int sizeArgs    = 3 * sizeof(int);
 
     // copy graph from host to device.    
 
@@ -79,7 +78,7 @@ void free_GPU(int *devVal, int *devColInd, int *devRowPtr, int *devDist, int *de
  * @A: the graph
  */
 void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
-              const int NUM_THREADS) {
+              int NUM_THREADS) {
     
 
     const int N = A.num_nodes();
@@ -88,11 +87,12 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
     const int& sizeColInd = sizeVal;
     const int sizeRowPtr = (N + 1) * sizeof(int);
     const int sizeDist = N * sizeof(int);
-    const int sizeArgs = 2 * sizeof(int);
+    const int sizeArgs = 3 * sizeof(int);
 
     //Calculate Range and init the argument lists
+    NUM_THREADS = min(NUM_THREADS, N);
     const int RANGE = ceil(N / (float)NUM_THREADS);
-    int args[] = {RANGE, 0};
+    int args[] = {RANGE, 0, N};
 
     //Device memory container
     int *devVal, *devColInd, *devRowPtr, *devDist, *devArgs;
@@ -112,8 +112,6 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
      * Running the Program in multiple Threads.
      */
 
-
-    int* arr1 = new int [N+1];
     int& changed = args[1];
 
     do {        
@@ -122,8 +120,7 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
         sssp<<<NUM_BLOCKS, NUM_THREADS>>>(devVal, devColInd, devRowPtr, devDist, devArgs);
         cudaMemcpy( args,  devArgs, sizeArgs  , cudaMemcpyDeviceToHost);
     } while (changed);
-  
-    free(arr1);  
+
 
     //Copy back data to dist
     cudaMemcpy( dist, devDist , sizeDist, cudaMemcpyDeviceToHost);
