@@ -25,7 +25,7 @@ __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
        RIGHT = N;
     }
 
-    int cost, v, num_edge, begin, end, weight, old;
+    int cost, v, num_edge, begin, end, weight;
     for (int u = LEFT; u < RIGHT; ++u) {
         begin = devRowPtr[u];
         end   = devRowPtr[u + 1];
@@ -36,8 +36,10 @@ __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
              weight = devVal[begin + e];
              //Crictical computation and decision
              cost = devDist[u] + weight;
-	     old = atomicMin( &devDist[v], cost);
-             changed = changed | (old != devDist[v]);
+	     if (cost < devDist[v] ){
+	         atomicMin( &devDist[v], cost);
+		 changed = true;
+	     }
          }
      }
 }
@@ -91,7 +93,8 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
 
     //Calculate Range and init the argument lists
     NUM_THREADS = min(NUM_THREADS, N);
-    const int RANGE = ceil(N / (float)NUM_THREADS);
+    const int RANGE = N / NUM_THREADS + ( N % NUM_THREADS != 0);
+
     int args[] = {RANGE, 0, N};
 
     //Device memory container
@@ -114,7 +117,7 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
 
     int& changed = args[1];
 
-    do {        
+    do {
         changed = 0;
         cudaMemcpy( devArgs,  args, sizeArgs  , cudaMemcpyHostToDevice);
         sssp<<<NUM_BLOCKS, NUM_THREADS>>>(devVal, devColInd, devRowPtr, devDist, devArgs);

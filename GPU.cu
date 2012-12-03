@@ -48,17 +48,15 @@ int main(int argc, char** argv) {
     int* dist = new int[NUM_NODES];
     dist_init(dist, SOURCE, NUM_NODES);
     
+
     Ford_GPU(A, dist, NUM_BLOCKS, NUM_THREADS);
 
-    dist_print(dist, NUM_NODES);
     dist_verify(dist, A, NUM_NODES);
 
     delete dist;
 
-//    int start = clock();
-//    int stop = clock();
-//    int elapsed_time = stop - start;
-//    cout << "Execution Time: " << ((float) elapsed_time) / CLOCKS_PER_SEC << endl;
+
+
     return 0;
 }
 
