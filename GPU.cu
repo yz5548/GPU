@@ -17,6 +17,10 @@
 #include "Ford_GPU.h"
 #include "CRS.h"
 
+#ifndef MAX_DEG
+#define MAX_DEG 100
+#endif
+
 using namespace std;
 
 /**
@@ -36,9 +40,8 @@ int main(int argc, char** argv) {
      * Reading Graph Data
      */
     read_graph_dimension(NUM_NODES, NUM_EDGES);
-    CRS A(NUM_NODES, NUM_EDGES);
+    CRS A(NUM_NODES, NUM_EDGES, MAX_DEG);
     read_graph(A);
-
 
     const int SOURCE = 1;
     const int NUM_BLOCKS  = atoi(argv[1]);
@@ -47,15 +50,11 @@ int main(int argc, char** argv) {
     //Initialization
     int* dist = new int[NUM_NODES];
     dist_init(dist, SOURCE, NUM_NODES);
-    
 
     Ford_GPU(A, dist, NUM_BLOCKS, NUM_THREADS);
-
     dist_verify(dist, A, NUM_NODES);
 
     delete dist;
-
-
 
     return 0;
 }
@@ -96,7 +95,7 @@ void read_graph(CRS& A) {
     int weight;
 
     const int N = A.num_nodes();
-    Graph B( N , A.num_edges());
+    Graph B( N , A._NUM_EDGES);
     while (cin >> line_type) {
         if (line_type == 'c') {
             cin.getline(line, 256, '\n');

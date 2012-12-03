@@ -6,52 +6,52 @@
 #include <cassert>
 #include <algorithm>
 
-
 const int DEFAULT_SIZE = 100;
+#define _val(x, y) _val[ (y) * (_NUM_NODES) + (x)]
+#define _col_ind(x, y) _col_ind[ (y) * (_NUM_NODES) + (x)]
 
 class CRS {
   public:
     int* _val;
     int* _col_ind;
-    int* _row_ptr;
     const int _NUM_NODES;
     const int _NUM_EDGES;
-
+    const int _MAX_DEGREE;
   public:
     int num_nodes() const;
-    CRS(int NUM_NODES, int NUM_EDGES);
+    CRS(int NUM_NODES, int NUM_EDGES, int MAX_DEGREE);
     ~CRS();
     void insert(int x, int y, int weight);
     int num_edges(int x);
-    int num_edges() const;
     int vertex(int x, int index);
     int &operator()(int x, int y);
-
+    int sizeByte();
     void print();
 };
 
 /**
  * Constructor:
- * Require number of nodes, and number of edges
+ * Require number of nodes, and number of edges,
+ * and max number of connection one node could possible have
  */
-CRS::CRS(int NUM_NODES, int NUM_EDGES)
-        : _val( new int[NUM_EDGES]),
-          _col_ind( new int[NUM_EDGES]),
-          // it needs an extra +1 to know where to stop
-          _row_ptr( new int[NUM_NODES + 1]),
+CRS::CRS(int NUM_NODES, int NUM_EDGES, int MAX_DEGREE):
+    _NUM_NODES(NUM_NODES),
+    _NUM_EDGES(NUM_EDGES),
+    _MAX_DEGREE(MAX_DEGREE) {
 
-          _NUM_NODES(NUM_NODES),
-          _NUM_EDGES(NUM_EDGES) {
-    _row_ptr[1] = 1;
+    _val = new int[NUM_NODES*MAX_DEGREE];
+    _col_ind = new int[NUM_NODES*MAX_DEGREE];
+    for (int i = 0; i < NUM_NODES; ++i) {
+        _val(i, 0) = 0;
+        _col_ind(i, 0) = 0;
+    }
 }
-
 /**
  * Destructor
  */
 CRS::~CRS(){
-    delete _val;
-    delete _col_ind;
-    delete _row_ptr;
+    delete [] _val;
+    delete [] _col_ind;
 }
 
 /**
@@ -60,23 +60,18 @@ CRS::~CRS(){
 int CRS::num_nodes() const{
     return _NUM_NODES;
 }
-int CRS::num_edges() const{
-    return _NUM_EDGES;
-}
 
 /**
  * Insert an edge to the CPR CRS
  */
 void CRS::insert(int x, int y, int weight) {
     //First time insertion on a node
-    if (_row_ptr[x + 1] == 0) {
-        _row_ptr[x + 1] = _row_ptr[x];
-    }
+    int index = _col_ind(x, 0) + 1;
+    _col_ind(x, index) = y;
+    _val(x, index) = weight;
 
-    int index = _row_ptr[x + 1];
-    _row_ptr[x + 1]++;
-    _col_ind[index] = y;
-    _val[index] = weight;
+    ++_col_ind(x, 0);
+    ++_val(x, 0);
 }
 
 /**
@@ -85,47 +80,38 @@ void CRS::insert(int x, int y, int weight) {
  * @param: index index of the arc on node u
  */
 int& CRS::operator () (int x, int index){
-    int begin, end;
-    begin = _row_ptr[ x ];
-    end  = _row_ptr[ x + 1 ];
-    assert (begin + index < end);
-    return _val[ begin + index];
+    assert(index < _val(x, 0));
+    return _val(x, index + 1);
 }
 
 /**
  * @return number of edges of node x
  */
 int CRS::num_edges(int x){
-    int num = std::max(_row_ptr[x + 1] - _row_ptr[ x ], 0);
-    return num;
+    assert (_col_ind(x, 0) == _val(x, 0));
+    return _col_ind(x, 0);
 }
 
 /**
  * @return: the vertex of node x, arc index
  */
 int CRS::vertex(int x, int index){
-    int begin, end;
-    begin = _row_ptr[ x ];
-    end  = _row_ptr[ x + 1 ];
-    assert (begin + index < end);
-    return _col_ind[ begin + index];
+    assert(index < _col_ind(x, 0));
+    return _col_ind(x, index+1);
 }
 
 /**
  * Print matrix containers
  */
 void CRS::print() {
-    for (unsigned int i = 1; i < _NUM_NODES; ++i) {
-        std::cout << _val[i] << " ";
+    for (int i = 0; i < _NUM_NODES; ++i) {
+        for (int j = 0; j < _col_ind(i, 0); ++j) {
+            printf("%d %d: %d\n", i , vertex(i, j), _val(i, j+1));
+        }
     }
-    std::cout << std::endl;
-    for (unsigned int i = 1; i < _NUM_NODES; ++i) {
-        std::cout << _col_ind[i] << " ";
-    }
-    std::cout << std::endl;
-    for (unsigned int i = 1; i < _NUM_NODES; ++i) {
-        std::cout << _row_ptr[i] << " ";
-    }
-    std::cout << std::endl;
+}
+
+int CRS::sizeByte(){
+    return _NUM_NODES * _MAX_DEGREE * sizeof(int);
 }
 #endif
