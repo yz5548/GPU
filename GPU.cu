@@ -43,7 +43,6 @@ int main(int argc, char** argv) {
     CRS A(NUM_NODES, NUM_EDGES, MAX_DEG);
     read_graph(A);
 
-    const int SOURCE = 1;
     const int NUM_BLOCKS  = atoi(argv[1]);
     const int NUM_THREADS = atoi(argv[2]);
 
