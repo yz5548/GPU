@@ -13,7 +13,7 @@ using namespace std;
  */
 __global__ void sssp(int *devVal, int *devColInd, int *devRowPtr, int *devDist,
           int *devArgs) {
-    const int threadID = threadIdx.x;
+    const int threadID = blockIdx.x * blockDim.x +  threadIdx.x;
 
     const int RANGE = devArgs[0];
     int& changed    = devArgs[1];
@@ -118,6 +118,7 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
     int& changed = args[1];
 
     do {
+
         changed = 0;
         cudaMemcpy( devArgs,  args, sizeArgs  , cudaMemcpyHostToDevice);
         sssp<<<NUM_BLOCKS, NUM_THREADS>>>(devVal, devColInd, devRowPtr, devDist, devArgs);
