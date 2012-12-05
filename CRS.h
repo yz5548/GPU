@@ -6,7 +6,6 @@
 #include <cassert>
 #include <algorithm>
 
-const int DEFAULT_SIZE = 100;
 #define _val(x, y) _val[ (y) * (_NUM_NODES) + (x)]
 #define _col_ind(x, y) _col_ind[ (y) * (_NUM_NODES) + (x)]
 

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-//#include <thrust/device_vector.h>
 
 #include "Graph.h"
 #include "Distance.h"
@@ -18,7 +17,7 @@
 #include "CRS.h"
 
 #ifndef MAX_DEG
-#define MAX_DEG 100
+#define MAX_DEG 20
 #endif
 
 using namespace std;
@@ -28,7 +27,6 @@ using namespace std;
  */
 void read_graph(CRS& A);
 void read_graph_dimension(int& NUM_NODES, int& NUM_EDGES);
-//void init_gpu(thrust::device_vector<int>& val, thrust::device_vector<int>& col_ind, thrust::device_vector<int>& row_ptr);
 // ----
 // main
 // ----
@@ -104,7 +102,6 @@ void read_graph(CRS& A) {
         } else
             break;
     }
-    
     for (int u = 1; u < N; ++u) {
         list<Edge>& edges = B[u];
         list<Edge>::iterator iterator;
@@ -114,6 +111,5 @@ void read_graph(CRS& A) {
             A.insert( u, v, edge._weight);
         }
     }    
-    
 }
 
