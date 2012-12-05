@@ -9,16 +9,20 @@
 #define devVal(x, y) devVal[ (y) * (NUM_NODES) + (x)]
 #define devColInd(x, y) devColInd[ (y) * (NUM_NODES) + (x)]
 #define SOURCE 1
+#define NUM_ARGS 3
 
 using namespace std;
 
 void print_work(unsigned *work, int sizeWork){
     int* hostWork = new int[sizeWork];
-    const int N = sizeWork / sizeof(int);
     cudaMemcpy( hostWork, work, sizeWork, cudaMemcpyDeviceToHost);
-    for (int i = 0; i < N; ++i)
+    const int N = hostWork[0];
+    cout << N << " " ;
+    assert ( N <= sizeWork / sizeof(int));
+    for (int i = 1; i <= N; ++i)
         cout << hostWork[i] << " " ;    
     cout << endl;
+    free(hostWork);
 }
 
 /**
@@ -27,15 +31,17 @@ void print_work(unsigned *work, int sizeWork){
  */
 __global__ void sssp(int *devVal, int *devColInd, int *devDist,
 		     int *devArgs, unsigned* oldWork, unsigned* newWork) {
-
     const int threadID = blockIdx.x * blockDim.x +  threadIdx.x;
 
-    const int TOTAL_THREADS = devArgs[0];
-    int& changed    = devArgs[1];
+    __shared__ __device__ int TOTAL_THREADS;
+    __shared__ __device__ int *changed;    
+    __shared__ __device__ int NUM_NODES;     
+    __shared__ __device__ int WORK_SIZE;    
 
-    const int NUM_NODES     = devArgs[2];
-
-    const int WORK_SIZE     = oldWork[0];
+    TOTAL_THREADS = devArgs[0];
+    changed   = &devArgs[1];
+    NUM_NODES = devArgs[2];
+    WORK_SIZE = oldWork[0];
 
     int cost, u, v, num_edge, weight, wIndex;
     for (int i = threadID + 1; i <= WORK_SIZE; i+= TOTAL_THREADS) {
@@ -48,14 +54,14 @@ __global__ void sssp(int *devVal, int *devColInd, int *devDist,
              cost = devDist[u] + weight;
 	     if (cost < devDist[v] ){
 	         atomicMin(&devDist[v], cost);
-		 changed = true;
-		 atomicAdd(&newWork[0], 1);
-		 wIndex = newWork[0];
+		 *changed = true;
+		 wIndex = atomicAdd(&newWork[0], 1) + 1;
 		 atomicExch( &newWork[wIndex], v);
-	     }
-         }
+     	     }
+	     __syncthreads();
+        }
+	__syncthreads();
      }
-
 }
 
 /**
@@ -67,13 +73,13 @@ void init_GPU(CRS& A, int dist[], int args[],
     const int N = A.num_nodes();
     const int sizeByte = A.sizeByte();
     const int sizeDist = N * sizeof(int);
-    const int sizeArgs = 3 * sizeof(int);
+    const int sizeArgs = NUM_ARGS * sizeof(int);
 
     // copy graph from host to device.    
 
-    cudaMemcpy( devVal   ,  A._val      , sizeByte  , cudaMemcpyHostToDevice);
-    cudaMemcpy( devColInd,  A._col_ind  , sizeByte  , cudaMemcpyHostToDevice);
-    cudaMemcpy( devDist  ,  dist        , sizeDist  , cudaMemcpyHostToDevice);
+    cudaMemcpyAsync( devVal   ,  A._val      , sizeByte  , cudaMemcpyHostToDevice);
+    cudaMemcpyAsync( devColInd,  A._col_ind  , sizeByte  , cudaMemcpyHostToDevice);
+    cudaMemcpyAsync( devDist  ,  dist        , sizeDist  , cudaMemcpyHostToDevice);
     cudaMemcpy( devArgs  ,  args        , sizeArgs  , cudaMemcpyHostToDevice);
 
 }
@@ -88,18 +94,11 @@ void free_GPU(int *devVal, int *devColInd, int *devDist, int *devArgs
     cudaFree(newWork);
 }
 
-void init_work(unsigned* work, int sizeWork, int init = 0){
-    int* empty = new int[sizeWork];
-    const int N = sizeWork / sizeof(int);
-    for (int i = 0; i < N; ++i)
-        empty[i] = 0;
-
-    if (init){
-       ++empty[0];
-       empty[1] = SOURCE;
-    }
-
-    cudaMemcpy( work, empty, sizeWork, cudaMemcpyHostToDevice);
+void init_work(unsigned* work){
+    unsigned* empty = new unsigned [2];
+    empty[0]  = 1;
+    empty[1] = SOURCE;
+    cudaMemcpy( work, empty, 2*sizeof(int), cudaMemcpyHostToDevice);
     free(empty);
 }
 
@@ -114,13 +113,13 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
     const int N = A.num_nodes();
     const int sizeByte = A.sizeByte();
     const int sizeDist = N * sizeof(int);
-    const int sizeArgs = 3 * sizeof(int);
-    const int sizeWork = sizeDist;
+    const int sizeArgs = NUM_ARGS * sizeof(int);
+    const int sizeWork = sizeDist ;
 
     //Calculate Range and init the argument lists
     const int TOTAL_THREADS =  min(NUM_THREADS * NUM_BLOCKS, N);
     NUM_THREADS = min(NUM_THREADS, N);
-    int args[] = {TOTAL_THREADS, 0, N};
+    int args[NUM_ARGS] = {TOTAL_THREADS, 0, N}; // TOTAL_THREADS, changed, NUM_NODES
 
     //Device memory container
     int *devVal, *devColInd, *devArgs, *devDist;
@@ -140,19 +139,16 @@ void Ford_GPU(CRS& A, int dist[], const int NUM_BLOCKS,
     /**
      * Running the Program in multiple Threads.
      */
-
+   
+    init_work( newWork );
     int& changed = args[1];
-    init_work( newWork, sizeWork, 1);
-
     do {
         changed = 0;
-        
-        cudaMemcpy( devArgs,  args, sizeArgs  , cudaMemcpyHostToDevice);
-	cudaMemcpy( oldWork,  newWork, sizeWork  , cudaMemcpyDeviceToDevice);
-	print_work( oldWork, sizeWork);
-	init_work( newWork, sizeWork);
-
-	sssp<<<NUM_BLOCKS, NUM_THREADS, sizeWork>>> (devVal, devColInd, devDist, devArgs, oldWork, newWork);
+        cudaMemcpyAsync( devArgs,  args,    sizeArgs, cudaMemcpyHostToDevice);
+	cudaMemcpyAsync( oldWork,  newWork, sizeWork, cudaMemcpyDeviceToDevice);
+        cudaMemset( newWork,  0,   sizeof(int));
+	//	print_work( oldWork, currentSizeWork);
+	sssp<<<NUM_BLOCKS, NUM_THREADS, sizeArgs>>> (devVal, devColInd, devDist, devArgs, oldWork, newWork);
 
         cudaMemcpy( args, devArgs, sizeArgs, cudaMemcpyDeviceToHost);
     } while (changed);
